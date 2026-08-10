@@ -62,12 +62,9 @@ fun HometownMarketApp() {
             Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
                 Text("Browse offers", style = MaterialTheme.typography.headlineSmall)
                 Text("No account needed to explore local listings.")
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 12.dp)) {
-                    FilterChip(selected = filter == null, onClick = { filter = null }, label = { Text("All") })
-                    OfferType.entries.forEach { type -> FilterChip(selected = filter == type, onClick = { filter = type }, label = { Text(type.label) }) }
-                }
+                Text("Offer types: cash · cash only · trade · trade only", modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.primary)
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    listings.filter { filter == null || it.offerType == filter }.forEach { ListingCard(it) }
+                    listings.forEach { ListingCard(it) }
                 }
             }
         }
