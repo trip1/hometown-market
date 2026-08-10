@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "chat.warpsignal.hometown.market.android.androidApp-mergeDebugResources-35:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "/home/trip/.gradle/caches/9.5.0/transforms/45edf2638abf4dee51faf38268ee1da2/transformed/material3/res/values-v30/values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        }
+    ]
+}

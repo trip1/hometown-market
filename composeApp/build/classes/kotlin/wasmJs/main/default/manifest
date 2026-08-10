@@ -1,0 +1,11 @@
+abi_version=2.3.0
+builtins_platform=WASM
+compiler_version=2.3.21
+ir_signature_versions=1,2
+jsOutputName=hometown-market-composeApp
+language_features=+AllowAnyAsAnActualTypeForExpectInterface +JsAllowImplementingFunctionInterface +MultiPlatformProjects
+metadata_version=2.3.0
+serializedIrFileFingerprints=38xopxnmuh6yr.zhzqslaid6dp
+serializedKlibFingerprint=v0wgsm18y2wz.1jjjgfpw57803
+unique_name=hometown-market\:composeApp
+wasm_targets=wasm-js
