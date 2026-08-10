@@ -66,7 +66,7 @@ fun HometownMarketApp() {
                     FilterChip(selected = filter == null, onClick = { filter = null }, label = { Text("All") })
                     OfferType.entries.forEach { type -> FilterChip(selected = filter == type, onClick = { filter = type }, label = { Text(type.label) }) }
                 }
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(listings.filter { filter == null || it.offerType == filter }, key = { it.id }) { ListingCard(it) }
                 }
             }
