@@ -61,11 +61,13 @@ fun HometownMarketApp() {
         } else {
             Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
                 Text("Browse offers", style = MaterialTheme.typography.headlineSmall)
-                Text("No account needed to explore local listings.")
-                Text("Offer types: cash · cash only · trade · trade only", modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.primary)
-                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    listings.forEach { ListingCard(it) }
-                }
+                Text(
+                    "No account needed to explore local listings.\n\n" +
+                        "Offer types: cash · cash only · trade · trade only\n\n" +
+                        "Vintage Raleigh road bike · Longview · Trade · $180\nFresh tune-up. Would trade for a cargo bike accessory.\n\n" +
+                        "Solid oak bookshelf · East Texas · Cash only · $65\nSix shelves, good condition.\n\n" +
+                        "Cast iron skillet set · Longview · Trade only · Make an offer\nTwo skillets, seasoned and ready.",
+                )
             }
         }
     }
