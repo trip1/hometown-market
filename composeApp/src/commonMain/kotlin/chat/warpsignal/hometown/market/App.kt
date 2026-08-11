@@ -92,22 +92,18 @@ fun HometownMarketApp(services: SupabaseServices? = null) {
 }
 
 @Composable private fun BrowseScreen(modifier: Modifier, listings: List<Listing>, loading: Boolean, error: String?, configured: Boolean, onSignIn: () -> Unit) {
-    LazyColumn(modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item {
-            Spacer(Modifier.height(14.dp))
-            Text("Discover nearby", style = MaterialTheme.typography.headlineLarge, color = Ink, fontWeight = FontWeight.Bold)
-            Text("Beautiful things deserve another story.", color = Color(0xFF6E6E73), modifier = Modifier.padding(top = 4.dp))
-            Spacer(Modifier.height(18.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OfferPill("All offers", true); OfferPill("Cash"); OfferPill("Trade"); OfferPill("Trade only") }
-        }
+    Column(modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Spacer(Modifier.height(14.dp))
+        Text("Discover nearby", style = MaterialTheme.typography.headlineLarge, color = Ink, fontWeight = FontWeight.Bold)
+        Text("Beautiful things deserve another story.", color = Color(0xFF6E6E73))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OfferPill("All offers", true); OfferPill("Cash"); OfferPill("Trade"); OfferPill("Trade only") }
         when {
-            loading -> item { LoadingCard() }
-            !configured -> item { EmptyCard("Set up Supabase", "This build is missing its public client configuration.") }
-            listings.isEmpty() -> item { EmptyCard("Be the first to list", "Public browsing is open. Sign in to post a local find, a cash offer, or a trade.", onSignIn) }
-            else -> items(listings) { ListingCard(it) }
+            loading -> LoadingCard()
+            !configured -> EmptyCard("Set up Supabase", "This build is missing its public client configuration.")
+            listings.isEmpty() -> EmptyCard("Be the first to list", "Public browsing is open. Sign in to post a local find, a cash offer, or a trade.", onSignIn)
+            else -> listings.take(4).forEach { ListingCard(it) }
         }
-        error?.let { message -> item { Text(message, color = Color(0xFFB42318), modifier = Modifier.padding(bottom = 24.dp)) } }
-        item { Spacer(Modifier.height(76.dp)) }
+        error?.let { message -> Text(message, color = Color(0xFFB42318)) }
     }
 }
 
