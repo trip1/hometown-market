@@ -1,4 +1,7 @@
 .gradle/
 **/build/
 kotlin-js-store/
+local.properties
+webApp/src/wasmJsMain/resources/supabase-config.js
+webApp/src/wasmJsMain/kotlin/chat/warpsignal/hometown/market/web/SupabaseRuntimeConfig.generated.kt
 !docs/

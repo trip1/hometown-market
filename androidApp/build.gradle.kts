@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
@@ -10,6 +12,10 @@ dependencies {
 }
 
 android {
+    val localProperties = Properties().apply {
+        rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
+    }
+    val supabasePublishableKey = localProperties.getProperty("SUPABASE_PUBLISHABLE_KEY", "")
     namespace = "chat.warpsignal.hometown.market.android"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {
@@ -18,5 +24,7 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$supabasePublishableKey\"")
     }
+    buildFeatures { buildConfig = true }
 }
