@@ -1,15 +1,26 @@
 package chat.warpsignal.hometown.market
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -22,14 +33,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import chat.warpsignal.hometown.market.supabase.CreateListingRequest
 import chat.warpsignal.hometown.market.supabase.SupabaseServices
 import chat.warpsignal.hometown.market.supabase.SupabaseSession
 import kotlinx.coroutines.launch
+
+private val Ink = Color(0xFF111113)
+private val Canvas = Color(0xFFF7F7F8)
+private val Mist = Color(0xFFE9E9ED)
+private val Accent = Color(0xFF007AFF)
+private val Moss = Color(0xFF1F7A59)
 
 enum class OfferType(val wire: String, val label: String) { Cash("cash", "Cash"), CashOnly("cash_only", "Cash only"), Trade("trade", "Trade"), TradeOnly("trade_only", "Trade only") }
 data class Listing(val title: String, val description: String, val price: String, val offerType: OfferType, val neighborhood: String)
@@ -39,59 +59,99 @@ fun HometownMarketApp(services: SupabaseServices? = null) {
     val scope = rememberCoroutineScope()
     var listings by remember { mutableStateOf<List<Listing>>(emptyList()) }
     var session by remember { mutableStateOf<SupabaseSession?>(null) }
-    var showingLogin by remember { mutableStateOf(false) }
-    var showingPost by remember { mutableStateOf(false) }
+    var screen by remember { mutableStateOf("browse") }
     var error by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(services != null) }
     LaunchedEffect(services) {
         if (services != null) runCatching { services.listings.publicListings() }
-            .onSuccess { rows -> listings = rows.map { Listing(it.title, it.description, it.priceCents?.let { cents -> "$${cents / 100}" } ?: "Offer", OfferType.entries.first { type -> type.wire == it.offerType }, it.neighborhood) } }
-            .onFailure { error = "Could not load offers" }
+            .onSuccess { rows -> listings = rows.map { row -> Listing(row.title, row.description, row.priceCents?.let { "$${it / 100}" } ?: "Make offer", OfferType.entries.firstOrNull { it.wire == row.offerType } ?: OfferType.Trade, row.neighborhood) }; loading = false }
+            .onFailure { error = "Couldn’t refresh offers right now."; loading = false }
     }
-    Scaffold(topBar = {
-        Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primary).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column { Text("Hometown Market", color = Color.White, fontWeight = FontWeight.Bold); Text("Buy local. Trade local.", color = Color.White) }
-            TextButton(onClick = { showingLogin = session == null }) { Text(if (session == null) "Sign in" else "Signed in", color = Color.White) }
-        }
-    }, floatingActionButton = { if (session != null) Button(onClick = { showingPost = true }) { Text("Post listing") } }) { padding ->
-        when {
-            showingLogin && services != null -> LoginScreen(Modifier.padding(padding), services, onSession = { session = it; showingLogin = false }, onCancel = { showingLogin = false })
-            showingPost && services != null && session != null -> ListingComposer(Modifier.padding(padding), onCancel = { showingPost = false }) { request ->
-                scope.launch { runCatching { services.listings.createListing(request.copy(ownerId = session!!.userId), session!!.accessToken); services.listings.publicListings() }
-                    .onSuccess { rows -> listings = rows.map { Listing(it.title, it.description, it.priceCents?.let { cents -> "$${cents / 100}" } ?: "Offer", OfferType.entries.first { type -> type.wire == it.offerType }, it.neighborhood) }; showingPost = false }
-                    .onFailure { error = "Could not publish listing" } }
+    Scaffold(containerColor = Canvas, topBar = { AppHeader(session != null, onAccount = { screen = if (session == null) "auth" else "browse" }) }, floatingActionButton = {
+        if (session != null && screen == "browse") Button(onClick = { screen = "post" }, colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = CircleShape) { Text("＋ List", modifier = Modifier.padding(horizontal = 4.dp)) }
+    }) { inset ->
+        when (screen) {
+            "auth" -> AuthScreen(Modifier.padding(inset), services, onSession = { session = it; screen = "browse" }, onBack = { screen = "browse" })
+            "post" -> ListingComposer(Modifier.padding(inset), onCancel = { screen = "browse" }) { request ->
+                val activeSession = session ?: return@ListingComposer
+                val api = services ?: return@ListingComposer
+                scope.launch { runCatching { api.listings.createListing(request.copy(ownerId = activeSession.userId), activeSession.accessToken); api.listings.publicListings() }
+                    .onSuccess { rows -> listings = rows.map { row -> Listing(row.title, row.description, row.priceCents?.let { "$${it / 100}" } ?: "Make offer", OfferType.entries.firstOrNull { it.wire == row.offerType } ?: OfferType.Trade, row.neighborhood) }; screen = "browse" }
+                    .onFailure { error = "Couldn’t publish this listing."; screen = "browse" } }
             }
-            else -> Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Browse offers", style = MaterialTheme.typography.headlineSmall)
-                Text("No account needed to explore local listings.")
-                if (services == null) Text("Supabase client configuration is required to load live listings.")
-                listings.forEach { listing -> Text("${listing.title} · ${listing.neighborhood} · ${listing.offerType.label} · ${listing.price}\n${listing.description}") }
-                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            }
+            else -> BrowseScreen(Modifier.padding(inset), listings, loading, error, services != null, onSignIn = { screen = "auth" })
         }
     }
 }
 
-@Composable private fun LoginScreen(modifier: Modifier, services: SupabaseServices, onSession: (SupabaseSession) -> Unit, onCancel: () -> Unit) {
+@Composable private fun AppHeader(signedIn: Boolean, onAccount: () -> Unit) {
+    Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        Column { Text("Hometown", color = Ink, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge); Text("local finds, thoughtfully traded", color = Color(0xFF6E6E73), style = MaterialTheme.typography.labelSmall) }
+        TextButton(onClick = onAccount, colors = ButtonDefaults.textButtonColors(contentColor = Accent)) { Text(if (signedIn) "Account" else "Sign in", fontWeight = FontWeight.SemiBold) }
+    }
+}
+
+@Composable private fun BrowseScreen(modifier: Modifier, listings: List<Listing>, loading: Boolean, error: String?, configured: Boolean, onSignIn: () -> Unit) {
+    LazyColumn(modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item {
+            Spacer(Modifier.height(14.dp))
+            Text("Discover nearby", style = MaterialTheme.typography.headlineLarge, color = Ink, fontWeight = FontWeight.Bold)
+            Text("Beautiful things deserve another story.", color = Color(0xFF6E6E73), modifier = Modifier.padding(top = 4.dp))
+            Spacer(Modifier.height(18.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OfferPill("All offers", true); OfferPill("Cash"); OfferPill("Trade"); OfferPill("Trade only") }
+        }
+        when {
+            loading -> item { LoadingCard() }
+            !configured -> item { EmptyCard("Set up Supabase", "This build is missing its public client configuration.") }
+            listings.isEmpty() -> item { EmptyCard("Be the first to list", "Public browsing is open. Sign in to post a local find, a cash offer, or a trade.", onSignIn) }
+            else -> items(listings) { ListingCard(it) }
+        }
+        error?.let { message -> item { Text(message, color = Color(0xFFB42318), modifier = Modifier.padding(bottom = 24.dp)) } }
+        item { Spacer(Modifier.height(76.dp)) }
+    }
+}
+
+@Composable private fun OfferPill(label: String, selected: Boolean = false) = Text(label, color = if (selected) Color.White else Ink, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.labelMedium, modifier = Modifier.clip(CircleShape).background(if (selected) Ink else Mist).padding(horizontal = 14.dp, vertical = 9.dp))
+
+@Composable private fun ListingCard(listing: Listing) {
+    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(76.dp).clip(RoundedCornerShape(16.dp)).background(if (listing.offerType == OfferType.Trade || listing.offerType == OfferType.TradeOnly) Color(0xFFDDF5E9) else Color(0xFFE4EEFF)), contentAlignment = Alignment.Center) { Text(if (listing.offerType == OfferType.Trade || listing.offerType == OfferType.TradeOnly) "↔" else "$", color = if (listing.offerType == OfferType.Trade || listing.offerType == OfferType.TradeOnly) Moss else Accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(listing.title, color = Ink, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${listing.neighborhood} · ${listing.offerType.label}", color = Color(0xFF6E6E73), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 2.dp))
+                Text(listing.description, color = Color(0xFF48484A), style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+            }
+            Spacer(Modifier.width(8.dp)); Text(listing.price, color = Ink, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+        }
+    }
+}
+
+@Composable private fun EmptyCard(title: String, body: String, action: (() -> Unit)? = null) = Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(24.dp)) { Text("✦", color = Accent, style = MaterialTheme.typography.headlineMedium); Spacer(Modifier.height(10.dp)); Text(title, color = Ink, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(body, color = Color(0xFF6E6E73), modifier = Modifier.padding(top = 6.dp)); action?.let { Button(onClick = it, colors = ButtonDefaults.buttonColors(containerColor = Ink), modifier = Modifier.padding(top = 16.dp)) { Text("Sign in to list") } } } }
+@Composable private fun LoadingCard() = EmptyCard("Finding local offers", "Refreshing the latest neighborhood listings…")
+
+@Composable private fun AuthScreen(modifier: Modifier, services: SupabaseServices?, onSession: (SupabaseSession) -> Unit, onBack: () -> Unit) {
     val scope = rememberCoroutineScope(); var email by remember { mutableStateOf("") }; var password by remember { mutableStateOf("") }; var error by remember { mutableStateOf<String?>(null) }
-    Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Sign in or create account", style = MaterialTheme.typography.headlineSmall)
-        OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(password, { password = it }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth())
-        Row { Button(onClick = { scope.launch { runCatching { services.auth.signIn(email, password) }.onSuccess(onSession).onFailure { error = "Sign-in failed" } } }) { Text("Sign in") }; Spacer(Modifier.width(8.dp)); Button(onClick = { scope.launch { runCatching { services.auth.signUp(email, password) }.onSuccess(onSession).onFailure { error = "Sign-up failed" } } }) { Text("Create account") } }
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }; TextButton(onClick = onCancel) { Text("Cancel") }
+    Column(modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        TextButton(onClick = onBack) { Text("‹ Back", color = Accent) }; Text("Welcome back", style = MaterialTheme.typography.headlineLarge, color = Ink, fontWeight = FontWeight.Bold); Text("Sign in to list, trade, and comment.", color = Color(0xFF6E6E73))
+        OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(password, { password = it }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Button(onClick = { if (services != null) scope.launch { runCatching { services.auth.signIn(email, password) }.onSuccess(onSession).onFailure { error = "Sign-in failed. Check your email and password." } } }, colors = ButtonDefaults.buttonColors(containerColor = Ink), modifier = Modifier.fillMaxWidth()) { Text("Sign in") }
+        TextButton(onClick = { if (services != null) scope.launch { runCatching { services.auth.signUp(email, password) }.onSuccess(onSession).onFailure { error = "Couldn’t create the account." } } }) { Text("New here? Create an account", color = Accent) }
+        error?.let { Text(it, color = Color(0xFFB42318)) }
     }
 }
 
 @Composable private fun ListingComposer(modifier: Modifier, onCancel: () -> Unit, onPost: (CreateListingRequest) -> Unit) {
     var title by remember { mutableStateOf("") }; var description by remember { mutableStateOf("") }; var neighborhood by remember { mutableStateOf("Longview") }; var price by remember { mutableStateOf("") }; var offer by remember { mutableStateOf(OfferType.Cash) }
-    Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Create listing", style = MaterialTheme.typography.headlineSmall)
-        OutlinedTextField(title, { title = it }, label = { Text("What are you offering?") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(description, { description = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth())
+    Column(modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        TextButton(onClick = onCancel) { Text("‹ Cancel", color = Accent) }; Text("List something good", style = MaterialTheme.typography.headlineLarge, color = Ink, fontWeight = FontWeight.Bold); Text("Tell neighbors what you have and how you’d like to trade.", color = Color(0xFF6E6E73))
+        OutlinedTextField(title, { title = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(description, { description = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
         OutlinedTextField(neighborhood, { neighborhood = it }, label = { Text("Neighborhood") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(price, { price = it }, label = { Text("Cash price in dollars (optional)") }, modifier = Modifier.fillMaxWidth())
-        Row { OfferType.entries.forEach { type -> TextButton(onClick = { offer = type }) { Text(if (offer == type) "• ${type.label}" else type.label) } } }
-        Button(enabled = title.length >= 3 && description.length >= 10, onClick = { onPost(CreateListingRequest("", title, description, offer.wire, price.toIntOrNull()?.times(100), neighborhood)) }) { Text("Publish") }
-        TextButton(onClick = onCancel) { Text("Cancel") }
+        OutlinedTextField(price, { price = it }, label = { Text("Cash price (optional)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { OfferType.entries.forEach { type -> Text(type.label, modifier = Modifier.clickable { offer = type }.clip(CircleShape).background(if (offer == type) Ink else Mist).padding(horizontal = 10.dp, vertical = 8.dp), color = if (offer == type) Color.White else Ink, style = MaterialTheme.typography.labelSmall) } }
+        Button(enabled = title.length >= 3 && description.length >= 10, onClick = { onPost(CreateListingRequest("", title, description, offer.wire, price.toIntOrNull()?.times(100), neighborhood)) }, colors = ButtonDefaults.buttonColors(containerColor = Ink), modifier = Modifier.fillMaxWidth()) { Text("Publish listing") }
     }
 }
