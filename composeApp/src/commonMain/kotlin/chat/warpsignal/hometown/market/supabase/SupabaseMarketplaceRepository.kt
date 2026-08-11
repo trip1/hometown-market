@@ -45,7 +45,7 @@ class SupabaseMarketplaceRepository(
         publicHeaders()
     }.body<List<ListingWire>>().map { it.toModel() }
 
-    override suspend fun createListing(listing: SupabaseListing, accessToken: String) {
+    override suspend fun createListing(listing: CreateListingRequest, accessToken: String) {
         client.post("${config.baseUrl}/rest/v1/listings") {
             authHeaders(accessToken)
             header("Prefer", "return=minimal")

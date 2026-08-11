@@ -21,11 +21,21 @@ data class SupabaseListing(
     val status: String,
 )
 
+@Serializable
+data class CreateListingRequest(
+    @SerialName("owner_id") val ownerId: String,
+    val title: String,
+    val description: String,
+    @SerialName("offer_type") val offerType: String,
+    @SerialName("price_cents") val priceCents: Int?,
+    val neighborhood: String,
+)
+
 interface MarketplaceRepository {
     /** Public: no user token required; RLS returns only active listings. */
     suspend fun publicListings(): List<SupabaseListing>
     /** Authenticated: sends a listing whose owner_id must match the current Supabase user. */
-    suspend fun createListing(listing: SupabaseListing, accessToken: String)
+    suspend fun createListing(listing: CreateListingRequest, accessToken: String)
     /** Authenticated: writes a comment subject to Supabase RLS. */
     suspend fun addComment(listingId: String, body: String, accessToken: String)
     /** Authenticated upload location, constrained by the Storage RLS policy. */
