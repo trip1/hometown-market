@@ -1,0 +1,30 @@
+package chat.warpsignal.hometown.market.supabase
+
+/** Public Supabase configuration. The publishable key is intentionally injected by each deploy target. */
+data class SupabaseConfig(
+    val baseUrl: String = "https://trades.dishman.xyz",
+    val publishableKey: String,
+)
+
+data class SupabaseListing(
+    val id: String,
+    val ownerId: String,
+    val title: String,
+    val description: String,
+    val offerType: String,
+    val priceCents: Int?,
+    val neighborhood: String,
+    val status: String,
+)
+
+interface MarketplaceRepository {
+    /** Public: no user token required; RLS returns only active listings. */
+    suspend fun publicListings(): List<SupabaseListing>
+    /** Authenticated: sends a listing whose owner_id must match the current Supabase user. */
+    suspend fun createListing(listing: SupabaseListing, accessToken: String)
+    /** Authenticated: writes a comment subject to Supabase RLS. */
+    suspend fun addComment(listingId: String, body: String, accessToken: String)
+    /** Authenticated upload location, constrained by the Storage RLS policy. */
+    fun listingImagePath(userId: String, listingId: String, fileName: String): String =
+        "$userId/$listingId/$fileName"
+}
