@@ -70,13 +70,22 @@ class SupabaseMarketplaceRepository(
 
     override fun publicImageUrl(objectPath: String): String = "${config.baseUrl}/storage/v1/object/public/listing-images/$objectPath"
 
-    override suspend fun createListing(listing: CreateListingRequest, accessToken: String) {
-        client.post("${config.baseUrl}/rest/v1/listings") {
+    override suspend fun addListingImage(listingId: String, ownerId: String, objectPath: String, accessToken: String) {
+        client.post("${config.baseUrl}/rest/v1/listing_images") {
             authHeaders(accessToken)
-            header("Prefer", "return=minimal")
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("listing_id" to listingId, "owner_id" to ownerId, "object_path" to objectPath))
+        }
+    }
+
+    override suspend fun createListing(listing: CreateListingRequest, accessToken: String): SupabaseListing {
+        val created = client.post("${config.baseUrl}/rest/v1/listings") {
+            authHeaders(accessToken)
+            header("Prefer", "return=representation")
             contentType(ContentType.Application.Json)
             setBody(listing)
-        }
+        }.body<List<ListingWire>>().single()
+        return created.toModel()
     }
 
     override suspend fun addComment(listingId: String, body: String, accessToken: String) {
@@ -87,7 +96,7 @@ class SupabaseMarketplaceRepository(
         }
     }
 
-    suspend fun uploadListingImage(path: String, bytes: ByteArray, mimeType: String, accessToken: String) {
+    override suspend fun uploadListingImage(path: String, bytes: ByteArray, mimeType: String, accessToken: String) {
         require(mimeType in setOf("image/jpeg", "image/png", "image/webp"))
         require(bytes.size <= 10 * 1024 * 1024)
         client.put("${config.baseUrl}/storage/v1/object/listing-images/$path") {

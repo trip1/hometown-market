@@ -51,7 +51,9 @@ interface MarketplaceRepository {
     suspend fun listingImages(listingId: String): List<ListingImage>
     suspend fun listingComments(listingId: String): List<ListingComment>
     fun publicImageUrl(objectPath: String): String
-    suspend fun createListing(listing: CreateListingRequest, accessToken: String)
+    suspend fun addListingImage(listingId: String, ownerId: String, objectPath: String, accessToken: String)
+    suspend fun uploadListingImage(path: String, bytes: ByteArray, mimeType: String, accessToken: String)
+    suspend fun createListing(listing: CreateListingRequest, accessToken: String): SupabaseListing
     /** Authenticated: writes a comment subject to Supabase RLS. */
     suspend fun addComment(listingId: String, body: String, accessToken: String)
     /** Authenticated upload location, constrained by the Storage RLS policy. */
