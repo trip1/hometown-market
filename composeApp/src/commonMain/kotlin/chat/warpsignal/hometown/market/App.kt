@@ -62,7 +62,7 @@ private fun List<chat.warpsignal.hometown.market.supabase.SupabaseListing>.toUiL
 fun HometownMarketApp(services: SupabaseServices? = null) {
     val scope = rememberCoroutineScope()
     var listings by remember { mutableStateOf<List<Listing>>(emptyList()) }
-    var session by remember { mutableStateOf<SupabaseSession?>(null) }
+    var session by remember { mutableStateOf(services?.sessionStore?.restore()) }
     var screen by remember { mutableStateOf("browse") }
     var selectedListing by remember { mutableStateOf<Listing?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -76,7 +76,7 @@ fun HometownMarketApp(services: SupabaseServices? = null) {
         if (session != null && screen == "browse") Button(onClick = { screen = "post" }, colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = CircleShape) { Text("＋ List", modifier = Modifier.padding(horizontal = 4.dp)) }
     }) { inset ->
         when (screen) {
-            "auth" -> AuthScreen(Modifier.padding(inset), services, onSession = { session = it; screen = "browse" }, onBack = { screen = "browse" })
+            "auth" -> AuthScreen(Modifier.padding(inset), services, onSession = { authenticated -> services?.sessionStore?.save(authenticated); session = authenticated; screen = "browse" }, onBack = { screen = "browse" })
             "post" -> ListingComposer(Modifier.padding(inset), onCancel = { screen = "browse" }) { request ->
                 val activeSession = session ?: return@ListingComposer
                 val api = services ?: return@ListingComposer
