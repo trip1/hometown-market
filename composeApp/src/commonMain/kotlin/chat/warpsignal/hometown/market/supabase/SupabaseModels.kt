@@ -31,10 +31,26 @@ data class CreateListingRequest(
     val neighborhood: String,
 )
 
+data class ListingImage(
+    val id: String,
+    val objectPath: String,
+    val sortOrder: Int,
+)
+
+@Serializable
+data class ListingComment(
+    val id: String,
+    val listingId: String,
+    val authorId: String,
+    val body: String,
+)
+
 interface MarketplaceRepository {
     /** Public: no user token required; RLS returns only active listings. */
     suspend fun publicListings(): List<SupabaseListing>
-    /** Authenticated: sends a listing whose owner_id must match the current Supabase user. */
+    suspend fun listingImages(listingId: String): List<ListingImage>
+    suspend fun listingComments(listingId: String): List<ListingComment>
+    fun publicImageUrl(objectPath: String): String
     suspend fun createListing(listing: CreateListingRequest, accessToken: String)
     /** Authenticated: writes a comment subject to Supabase RLS. */
     suspend fun addComment(listingId: String, body: String, accessToken: String)
