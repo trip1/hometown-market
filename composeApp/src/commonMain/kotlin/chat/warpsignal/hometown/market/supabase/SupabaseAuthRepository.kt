@@ -25,7 +25,7 @@ private data class AuthWire(
 
 class SupabaseAuthRepository(
     private val config: SupabaseConfig,
-    private val client: HttpClient = HttpClient { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } },
+    private val client: HttpClient = platformHttpClient().config { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } },
 ) {
     suspend fun signIn(email: String, password: String): SupabaseSession = authenticate("token?grant_type=password", mapOf("email" to email, "password" to password))
     suspend fun signUp(email: String, password: String): SupabaseSession = authenticate("signup", mapOf("email" to email, "password" to password))

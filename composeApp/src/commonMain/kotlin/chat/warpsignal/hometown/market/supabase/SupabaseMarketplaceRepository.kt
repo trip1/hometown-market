@@ -30,7 +30,7 @@ private data class ListingWire(
 
 class SupabaseMarketplaceRepository(
     private val config: SupabaseConfig,
-    private val client: HttpClient = HttpClient {
+    private val client: HttpClient = platformHttpClient().config {
         install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
     },
 ) : MarketplaceRepository {
