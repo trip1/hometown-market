@@ -2,6 +2,8 @@ package chat.warpsignal.hometown.market
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -107,16 +109,30 @@ fun HometownMarketApp(services: SupabaseServices? = null) {
 }
 
 @Composable private fun BrowseScreen(modifier: Modifier, listings: List<Listing>, loading: Boolean, error: String?, configured: Boolean, onSignIn: () -> Unit, onListing: (Listing) -> Unit) {
-    Column(modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Spacer(Modifier.height(14.dp)); Text("Discover nearby", style = MaterialTheme.typography.headlineLarge, color = Ink, fontWeight = FontWeight.Bold); Text("Beautiful things deserve another story.", color = Color(0xFF6E6E73)); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OfferPill("All offers", true); OfferPill("Cash"); OfferPill("Trade"); OfferPill("Trade only") }
-        when { loading -> LoadingCard(); !configured -> EmptyCard("Set up Supabase", "This build is missing its public client configuration."); listings.isEmpty() -> EmptyCard("Be the first to list", "Public browsing is open. Sign in to post a local find, a cash offer, or a trade.", onSignIn); else -> listings.take(4).forEach { ListingCard(it, onClick = { onListing(it) }) } }
+    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Spacer(Modifier.height(10.dp))
+        Text("LOCAL MARKET", style = MaterialTheme.typography.labelSmall, color = Accent, fontWeight = FontWeight.Bold)
+        Text("Good things,\nclose to home.", style = MaterialTheme.typography.headlineLarge, color = Ink, fontWeight = FontWeight.Bold)
+        Text("A calmer way to buy, sell, and trade around Longview.", color = Color(0xFF6E6E73), style = MaterialTheme.typography.bodyMedium)
+        AppStoreCategories()
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(if (listings.isEmpty()) "Fresh around you" else "Featured nearby", color = Ink, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("See all", color = Accent, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        }
+        when { loading -> LoadingCard(); !configured -> EmptyCard("Set up Supabase", "This build is missing its public client configuration."); listings.isEmpty() -> EmptyCard("Your neighborhood starts here", "Share something useful, find a fair deal, or trade for what you need.", onSignIn); else -> listings.take(4).forEach { ListingCard(it, onClick = { onListing(it) }) } }
         error?.let { Text(it, color = Color(0xFFB42318)) }
     }
 }
 
-@Composable private fun OfferPill(label: String, selected: Boolean = false) = Text(label, color = if (selected) Color.White else Ink, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.labelMedium, modifier = Modifier.clip(CircleShape).background(if (selected) Ink else Mist).padding(horizontal = 14.dp, vertical = 9.dp))
+@Composable private fun AppStoreCategories() = Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    CategoryCard("Cash", "$", Color(0xFFE8F1FF), Accent)
+    CategoryCard("Trade", "↔", Color(0xFFE6F7ED), Moss)
+    CategoryCard("Free", "✦", Color(0xFFFFF0E1), Color(0xFFB85C00))
+}
 
-@Composable private fun ListingCard(listing: Listing, onClick: () -> Unit) = Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp), modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) { Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(76.dp).clip(RoundedCornerShape(16.dp)).background(if (listing.offerType == OfferType.Trade || listing.offerType == OfferType.TradeOnly) Color(0xFFDDF5E9) else Color(0xFFE4EEFF)), contentAlignment = Alignment.Center) { Text(if (listing.offerType == OfferType.Trade || listing.offerType == OfferType.TradeOnly) "↔" else "$", color = if (listing.offerType == OfferType.Trade || listing.offerType == OfferType.TradeOnly) Moss else Accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }; Spacer(Modifier.width(14.dp)); Column(Modifier.weight(1f)) { Text(listing.title, color = Ink, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis); Text("${listing.neighborhood} · ${listing.offerType.label}", color = Color(0xFF6E6E73), style = MaterialTheme.typography.labelMedium); Text(listing.description, color = Color(0xFF48484A), style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp)) }; Spacer(Modifier.width(8.dp)); Text(listing.price, color = Ink, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium) } }
+@Composable private fun CategoryCard(label: String, symbol: String, tint: Color, foreground: Color) = Card(colors = CardDefaults.cardColors(containerColor = tint), shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp), modifier = Modifier.width(98.dp)) { Column(Modifier.padding(14.dp)) { Text(symbol, color = foreground, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Spacer(Modifier.height(10.dp)); Text(label, color = Ink, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) } }
+
+@Composable private fun ListingCard(listing: Listing, onClick: () -> Unit) = Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(26.dp), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp), modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(56.dp).clip(RoundedCornerShape(18.dp)).background(if (listing.offerType == OfferType.Trade || listing.offerType == OfferType.TradeOnly) Color(0xFFDDF5E9) else Color(0xFFE4EEFF)), contentAlignment = Alignment.Center) { Text(if (listing.offerType == OfferType.Trade || listing.offerType == OfferType.TradeOnly) "↔" else "$", color = if (listing.offerType == OfferType.Trade || listing.offerType == OfferType.TradeOnly) Moss else Accent, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }; Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(listing.title, color = Ink, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(listing.neighborhood, color = Color(0xFF6E6E73), style = MaterialTheme.typography.labelMedium) }; Text(listing.price, color = Ink, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium) }; Text(listing.description, color = Color(0xFF48484A), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis); Text(listing.offerType.label.uppercase(), color = if (listing.offerType == OfferType.Trade || listing.offerType == OfferType.TradeOnly) Moss else Accent, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) } }
 
 @Composable private fun DetailScreen(modifier: Modifier, listing: Listing, services: SupabaseServices?, session: SupabaseSession?, onBack: () -> Unit) {
     val scope = rememberCoroutineScope(); var images by remember { mutableStateOf<List<ListingImage>>(emptyList()) }; var comments by remember { mutableStateOf<List<ListingComment>>(emptyList()) }; var draft by remember { mutableStateOf("") }; var error by remember { mutableStateOf<String?>(null) }
